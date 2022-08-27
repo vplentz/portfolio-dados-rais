@@ -33,13 +33,18 @@ variable "private_subnet_cidrs" {
   type = list(string)
 }
 
-variable "dl_s3_bucket_name" {
+variable "dl_bucket_name" {
   type = string
 }
 
-module "dl_s3" {
-  source            = "./dl_s3"
-  dl_s3_bucket_name = var.dl_s3_bucket_name
+module "dl_gcs" {
+  source            = "./dl_gcs"
+  dl_gcs_bucket_name = var.dl_bucket_name
+}
+
+module "s3_dags" {
+  source = "./s3_dags"
+  airflow_dags_bucket_name = var.airflow_dags_bucket_name
 }
 
 module "mwaa_network" {
@@ -52,29 +57,11 @@ module "mwaa_network" {
 
 module "secret_manager" {
   source = "./secret_manager"
-  dl_s3_bucket_arn = module.dl_s3.aws_s3_data_bucket
-  dl_s3_iam_user_id = module.dl_s3.aws_dl_s3_user_id
-  dl_s3_iam_user_secret = module.dl_s3.aws_dl_s3_user_secret
+  dl_bucket_id = module.dl_gcs.dl_bucket_id
+  gcp_secret_key = module.dl_gcs.service_credential_private
+  gcp_project = "caged-rais-vplentz"
 }
 
-resource "aws_s3_bucket" "dags_bucket" {
-  bucket_prefix = var.airflow_dags_bucket_name
-}
-
-resource "aws_s3_bucket_public_access_block" "s3_bucket_public_access_block" {
-  bucket                  = aws_s3_bucket.dags_bucket.id
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_object" "upload_dags" {
-  for_each = fileset("../dags/", "*.py")
-  bucket   = aws_s3_bucket.dags_bucket.id
-  key      = "dags/${each.value}"
-  source   = "../dags/${each.value}"
-}
 
 resource "aws_iam_role" "iam_role" {
   name = var.prefix
@@ -217,13 +204,15 @@ resource "aws_mwaa_environment" "airflow" {
   name                  = var.prefix
   airflow_version       = "2.2.2"
   dag_s3_path           = "dags/"
+  requirements_s3_path = "requirements.txt"
+  requirements_s3_object_version = module.s3_dags.requirements_version_id
   environment_class     = "mw1.small"
   execution_role_arn    = aws_iam_role.iam_role.arn
   max_workers           = var.mwaa_max_workers
-  source_bucket_arn     = aws_s3_bucket.dags_bucket.arn
+  source_bucket_arn     = module.s3_dags.dag_bucket_arn
   webserver_access_mode = "PUBLIC_ONLY"
   depends_on = [
-    aws_s3_bucket.dags_bucket
+    module.s3_dags
   ]
   network_configuration {
     security_group_ids = [module.mwaa_network.aws_sg_id]
@@ -237,4 +226,8 @@ resource "aws_mwaa_environment" "airflow" {
 
 output "AirflowIP" {
   value = aws_mwaa_environment.airflow.webserver_url
+}
+
+output "service_credential_private"{
+  value = module.dl_gcs.service_credential_private
 }
