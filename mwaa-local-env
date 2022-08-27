@@ -79,7 +79,7 @@ start)
    docker-compose -p $DOCKER_COMPOSE_PROJECT_NAME -f ./docker/docker-compose-local.yml up
    ;;
 destroy)
-   terraform destroy -auto-approve ${PWD}/terraform/dl_s3
+   #terraform destroy -auto-approve ${PWD}/terraform/dl_s3
    docker-compose -p $DOCKER_COMPOSE_PROJECT_NAME -f ./docker/docker-compose-resetdb.yml up --abort-on-container-exit 
    docker-compose -p $DOCKER_COMPOSE_PROJECT_NAME -f ./docker/docker-compose-local.yml down
    ;;   
