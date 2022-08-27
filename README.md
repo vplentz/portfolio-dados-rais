@@ -54,7 +54,11 @@ O ambiente de desenvolvimento foi baseado no repositório da [AWS MWAA Local Run
 Para rodar o ambiente, você precisará do Docker. 
 
 Instruções:
+* Levantar Artifact Registry GCP;
+* Enviar imagem de extrator para o AR;
+* Levantar o Bucket GCP e copiar credenciais;
 * Build: `./mwaa-local-env build-image`
 * Start: `./mwaa-local-env start`
+* Adicionar credencias as conexões airflow;
 
 Troubleshoot e customizações: Verifique o repositório original da AWS.
