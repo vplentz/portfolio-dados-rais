@@ -7,7 +7,7 @@ from airflow.providers.google.cloud.operators.kubernetes_engine import (
     GKEDeleteClusterOperator,
     GKEStartPodOperator,
 )
-from kubernetes.client import models as k8s
+from airflow.providers.cncf.kubernetes.operators.kubernetes_pod import KubernetesPodOperator
 
 with models.DAG(
     "caged_ingest",
@@ -39,28 +39,25 @@ with models.DAG(
     )
 
 
-    # extract_task = GKEStartPodOperator(
-    #     task_id="extract_task",
-    #     cluster_name=CLUSTER_NAME,
-    #     image="google/cloud-sdk",
-    #     name="extract_pod",
-    #     random_name_suffix=True,
-    #     volumes=[k8s.V1Volume(
-    #         secret=k8s.V1SecretVolumeSource(
-    #             secret_name="volume-prod",
-    #             items=[
-    #                 k8s.V1KeyToPath(key="config", path="config.json"),
-    #             ],
-    #         )
-    #     )], 
-    #     cmds=["/extract.sh -f pdet/microdados/CAGED/CAGEDEST_layout_Atualizado.xls -b vplentz-dl-dev"],
-    #     location=GCP_LOCATIONM
-    #     project_id=GCP_PROJECT_ID,
-    #     gcp_conn_id=GCP_CONN_ID,
-    #     regional=True,
-
+    extract_task = GKEStartPodOperator(
+        task_id="extract_task",
+        cluster_name=CLUSTER_NAME,
+        image="us-east1-docker.pkg.dev/caged-rais-vplentz/caged-rais-docker-repo/extractor_gsutil:tag1",
+        name="extract_pod",
+        random_name_suffix=True,
+        cmds=["./extract.sh -f pdet/microdados/CAGED/CAGEDEST_layout_Atualizado.xls -b vplentz-dl-dev"],
+        location=GCP_LOCATION,
+        project_id=GCP_PROJECT_ID,
+        gcp_conn_id=GCP_CONN_ID,    
+        regional=True,
     )
-
+    k = KubernetesPodOperator(
+        task_id="extract_task_k8",
+        name="extract_task_k8",
+        image="us-east1-docker.pkg.dev/caged-rais-vplentz/caged-rais-docker-repo/extractor_gsutil:tag1",
+        cmds=["./extract.sh -f pdet/microdados/CAGED/CAGEDEST_layout_Atualizado.xls -b vplentz-dl-dev"],
+        config_file="extractor/kubeconfig.yaml"
+    )
     delete_cluster_task = GKEDeleteClusterOperator(
         task_id="delete_cluster",
         name=CLUSTER_NAME,
@@ -68,4 +65,4 @@ with models.DAG(
         location=GCP_LOCATION,
         gcp_conn_id=GCP_CONN_ID
     )
-    create_cluster_task >> delete_cluster_task
+    create_cluster_task >> extract_task >> delete_cluster_task

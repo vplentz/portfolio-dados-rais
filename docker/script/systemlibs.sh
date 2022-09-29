@@ -29,6 +29,20 @@ yum install -y nc
 # Needed for generating fernet key for local runner
 yum install -y python2-cryptography
 
+
+# install gcloud 
+tee -a /etc/yum.repos.d/google-cloud-sdk.repo << EOM
+[google-cloud-cli]
+name=Google Cloud CLI
+baseurl=https://packages.cloud.google.com/yum/repos/cloud-sdk-el8-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=0
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+       https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOM
+yum install -y google-cloud-sdk
+
 # Install additional system library dependencies. Provided as a string of libraries separated by space
 if [ -n "${SYSTEM_DEPS}" ]; then yum install -y "${SYSTEM_DEPS}"; fi
 
