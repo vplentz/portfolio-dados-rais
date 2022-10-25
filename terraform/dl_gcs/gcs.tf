@@ -62,6 +62,7 @@ output "service_credential_pub" {
 
 output "service_credential_private" {
   value = base64decode(google_service_account_key.service-account-credentials.private_key)
+  sensitive = true
 }
 
 output "dl_bucket_id" {
