@@ -16,7 +16,7 @@ if [[ $local = "dev" ]]; then # Checking if manual GCS credential is needed
     echo "LOCAL DEVELOPMENT ENV!!"
     if ! [[ $(ls credentials/ | grep gcs_credential.json) ]]; then
         echo "Creating a local GCS Credential File into credentials/gcs_credential.json"
-        terraform -chdir=$PWD/../../terraform/dl_gcs/ output service_credential_private >> credentials/gcs_credential.json
+        terraform -chdir=$PWD/../../terraform/dl_gcs/ output -json service_credential_private >> credentials/gcs_credential.json
     else
         echo "GCS Credential File already exists."
     fi
